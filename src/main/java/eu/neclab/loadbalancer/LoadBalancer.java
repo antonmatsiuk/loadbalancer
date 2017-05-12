@@ -32,6 +32,8 @@ public interface LoadBalancer {
 
     public List<Server> getServerPool();
 
+    public int getServerPoolSize();
+
     public int getQueueNum();
 
     public ConcurrentLinkedQueue<Packet> getPacketQueue(int index);

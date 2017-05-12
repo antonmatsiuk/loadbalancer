@@ -29,51 +29,69 @@ public class LoadBalancerApp {
 
     public static void main(String[] args) {
         Logger LOG = LoggerFactory.getLogger(LoadBalancerApp.class);
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Enter front-end Load-balancer's IP: ");
-        String fiface = scanner.next();
-        System.out.print("Enter Front-end Port: ");
-        int feport = Integer.parseInt(scanner.next());
-        System.out.print("Enter back-end Load-balancer's IP: ");
-        String biface = scanner.next();
-        //Hardcoding qnum;
-        int qnum = 8;
-        String proto = "tcp";
-        LOG.info("Creating Load Balancer: front-end IP:{} back-end IP: {} proto: {} port:{} qnum:{}"
-                ,fiface, biface, proto, feport, qnum);
+//        Scanner scanner = new Scanner(System.in);
+//        System.out.print("Enter front-end Load-balancer's IP: ");
+//        String fiface = scanner.next();
+//        System.out.print("Enter Front-end Port: ");
+//        int feport = Integer.parseInt(scanner.next());
+//        System.out.print("Enter back-end Load-balancer's IP: ");
+//        String biface = scanner.next();
+//        //Hardcoding qnum;
+//        int qnum = 8;
+//        String proto = "tcp";
+//        LOG.info("Creating Load Balancer: front-end IP:{} back-end IP: {} proto: {} port:{} qnum:{}"
+//                ,fiface, biface, proto, feport, qnum);
+//
+//        LoadBalancer loadBalancer = new LoadBalancerImpl(fiface, biface, feport, proto, qnum);
+//
+//        try {
+//            Thread.sleep(1000);
+//        } catch (InterruptedException e) {
+//            // TODO Auto-generated catch block
+//            e.printStackTrace();
+//        }
+//        menu();
+//        int command = Integer.parseInt(scanner.next());
+//        while (command !=  0){
+//            if (command == 1){
+//                System.out.print("Enter Server IP to add: ");
+//                String servip = scanner.next();
+//                loadBalancer.addServer(servip);
+//            } else if (command == 2){
+//                System.out.print("Enter Server IP to remove: ");
+//                String servip = scanner.next();
+//                loadBalancer.removeServer(servip);
+//            } else if (command == 3){
+//                System.out.print("Active servers in the pool: ");
+//                //loadBalancer.getServerPool();
+//            } else if (command == 0){
+//                System.out.print("Exiting LoadBalancer app...");
+//                break;
+//            }
+//            else {
+//                System.out.print("Unknown command, try again");
+//            }
+//            menu();
+//            command = Integer.parseInt(scanner.next());
+//        }
+//        loadBalancer.stopLoadBalancer();
 
-        LoadBalancer loadBalancer = new LoadBalancerImpl(fiface, biface, feport, proto, qnum);
 
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        menu();
-        int command = Integer.parseInt(scanner.next());
-        while (command !=  0){
-            if (command == 1){
-                System.out.print("Enter Server IP to add: ");
-                String servip = scanner.next();
-                loadBalancer.addServer(servip);
-            } else if (command == 2){
-                System.out.print("Enter Server IP to remove: ");
-                String servip = scanner.next();
-                loadBalancer.removeServer(servip);
-            } else if (command == 3){
-                System.out.print("Active servers in the pool: ");
-                //loadBalancer.getServerPool();
-            } else if (command == 0){
-                System.out.print("Exiting LoadBalancer app...");
-                break;
-            }
-            else {
-                System.out.print("Unknown command, try again");
-            }
-            menu();
-            command = Integer.parseInt(scanner.next());
-        }
-        loadBalancer.stopLoadBalancer();
+      String fiface = "10.0.2.15";
+      int feport = 80;
+      String biface = "10.10.10.1";
+      int qnum = 8;
+      String proto = "tcp";
+      LOG.info("Creating Load Balancer: front-end IP:{} back-end IP: {} proto: {} port:{} qnum:{}"
+              ,fiface, biface, proto, feport, qnum);
+
+      LoadBalancer loadBalancer = new LoadBalancerImpl(fiface, biface, feport, proto, qnum);
+      String servip1 = "10.10.10.2";
+      loadBalancer.addServer(servip1);
+      String servip2 = "10.10.10.3";
+      loadBalancer.addServer(servip2);
+      System.out.print("Active servers in the pool: ");
+      System.out.print(loadBalancer.getServerPoolStr());
+
     }
 }

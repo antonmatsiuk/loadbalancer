@@ -41,6 +41,8 @@ public final class LoadBalancerImpl implements LoadBalancer{
      */
     private final List<Server> serverPool;
 
+    private int serverPoolSize;
+
     private final List<ConcurrentLinkedQueue> packetQueues;
 
     /**
@@ -89,7 +91,7 @@ public final class LoadBalancerImpl implements LoadBalancer{
             int tosClass = precBits.value().intValue();
             Inet4Address srcAddr = ipv4Packet.getHeader().getSrcAddr();
             Inet4Address dstAddr = ipv4Packet.getHeader().getDstAddr();
-            LOG.info("Got a packet src.ip={} dst.ip= {} prec ={}",
+            LOG.info("FE: src.ip={} dst.ip= {} prec ={}",
                     srcAddr.toString(), dstAddr.toString(), tosClass);
             //put a packet to a particular queue
             ConcurrentLinkedQueue<Packet> queue = getPacketQueue(tosClass);
@@ -121,6 +123,7 @@ public final class LoadBalancerImpl implements LoadBalancer{
     public LoadBalancerImpl(String feip, String beip, int port, String proto, int qnum){
         serverPool = new ArrayList<>();
         packetQueues = new ArrayList<>();
+        serverPoolSize = 0;
         for (int i=0; i<qnum; i++){
             ConcurrentLinkedQueue<Packet> queue = new ConcurrentLinkedQueue<>();
             packetQueues.add(queue);
@@ -131,7 +134,7 @@ public final class LoadBalancerImpl implements LoadBalancer{
             //start a front-end packet handler
             //String filter = new String("ip src net "+feip+ " and tcp dst port "+port);
             LOG.info("Starting front-end handler");
-            String feFilter = new String("ip src net "+feip+ " and "+proto);
+            String feFilter = new String("ip dst net "+feip+ " and "+proto);
             feHandler = new IfHandler(this, feip, feFilter, feListener);
             Thread feHandlerThread = new Thread(feHandler);
             feHandlerThread.setName("FrontEndThread");
@@ -179,9 +182,9 @@ public final class LoadBalancerImpl implements LoadBalancer{
                 //TODO check iface syntax
                 serverPool.add(serv);
                 LOG.info("Adding Server to the pool IP:{}", iface);
-                LOG.info("Server pool length: {}",serverPool.size());
+                serverPoolSize = serverPool.size();
+                LOG.info("Server pool length: {}", serverPoolSize);
                 //TODO rehash the balancer
-
                 return true;
             }
         } else {
@@ -196,7 +199,9 @@ public final class LoadBalancerImpl implements LoadBalancer{
         if (serverPool.contains(serv)){
             LOG.info("Removing Server from the pool IP:{}", iface);
             serverPool.remove(serv);
-            LOG.info("Server pool size: {}",serverPool.size());
+            serverPoolSize = serverPool.size();
+            LOG.info("Server pool size: {}", serverPoolSize);
+
         } else {
             LOG.info("No such server in the pool IP:{}", iface);
         };
@@ -215,8 +220,12 @@ public final class LoadBalancerImpl implements LoadBalancer{
 
     @Override
     public List<Server> getServerPool() {
-        // TODO Auto-generated method stub
-        return null;
+        return serverPool;
+    }
+
+    @Override
+    public int getServerPoolSize() {
+        return serverPoolSize;
     }
 
 
