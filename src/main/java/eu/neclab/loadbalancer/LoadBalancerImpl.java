@@ -204,7 +204,7 @@ public final class LoadBalancerImpl implements LoadBalancer{
         gwmac = MacAddress.getByName(gwmc);
         try {
             feipaddr = InetAddress.getByName(feip);
-            beipaddr = InetAddress.getByName(feip);
+            beipaddr = InetAddress.getByName(beip);
         } catch (UnknownHostException e) {
             LOG.error("Wrong IP address provided", e);
             e.printStackTrace();

@@ -88,7 +88,7 @@ public class LoadBalancerApp {
 //        }
 //        loadBalancer.stopLoadBalancer();
 
-      uncomment the block below to use static values
+      //uncomment the block below to use static values
       String fiface = "10.0.2.15";
       //GW's MAC address here is static;
       //Load-balancer sends all the traffic to clients through a gateway

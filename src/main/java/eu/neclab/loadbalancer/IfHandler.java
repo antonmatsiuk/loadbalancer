@@ -100,7 +100,7 @@ public class IfHandler implements Runnable {
         PcapHandle handle = null;
         try {
             nif = Pcaps.getDevByAddress(ipv4addr);
-            int snapLen = 65536;
+            int snapLen = 1500;
             PromiscuousMode mode = PromiscuousMode.PROMISCUOUS;
             int timeout = 10;
             handle = nif.openLive(snapLen, mode, timeout);
