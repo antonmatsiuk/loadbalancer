@@ -7,13 +7,11 @@
  */
 package eu.neclab.loadbalancer;
 
-import java.io.IOException;
-import java.util.Collection;
 import java.net.Inet4Address;
-import java.net.InetSocketAddress;
-import java.net.Socket;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import org.pcap4j.core.NotOpenException;
@@ -21,9 +19,10 @@ import org.pcap4j.core.PacketListener;
 import org.pcap4j.core.PcapNativeException;
 import org.pcap4j.packet.IpV4Packet;
 import org.pcap4j.packet.IpV4Rfc1349Tos;
-import org.pcap4j.packet.IpV4Rfc791Tos;
 import org.pcap4j.packet.Packet;
+import org.pcap4j.packet.IpV4Packet.Builder;
 import org.pcap4j.packet.namednumber.IpV4TosPrecedence;
+import org.pcap4j.util.MacAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,15 +44,44 @@ public final class LoadBalancerImpl implements LoadBalancer{
 
     private final List<ConcurrentLinkedQueue> packetQueues;
 
+    private InetAddress feipaddr;
+
+
+    private InetAddress beipaddr;
+
+    private final MacAddress gwmac;
+
+
+    private final Hashtable<InetAddress , MacAddress>  feMacCache =
+            new Hashtable<>();
+
     /**
-     * Front-end interface of the load balancer.
+     * Front-end IF handler.
      */
-    //private final InetSocketAddress frontIf;
-
-    //private final InetSocketAddress backIf;
-
     private IfHandler feHandler;
+    /**
+     * Back-end IF handler.
+     */
     private IfHandler beHandler;
+
+
+    @Override
+    public IfHandler getFeHandler() {
+        if (feHandler != null){
+            return feHandler;
+        } else {
+            throw new NullPointerException("Front-end IF handler is null");
+        }
+    }
+
+    @Override
+    public IfHandler getBeHandler() {
+        if (beHandler != null){
+            return beHandler;
+        } else {
+            throw new NullPointerException("Back-end IF handler is null");
+        }
+    }
 
     @Override
     public ConcurrentLinkedQueue<Packet> getPacketQueue(int index){
@@ -66,6 +94,63 @@ public final class LoadBalancerImpl implements LoadBalancer{
         return  packetQueues.size();
     }
 
+    @Override
+    public boolean removeServer(String ip) {
+        Server serv = new Server(ip, null);
+        if (serverPool.contains(serv)){
+            LOG.info("Removing Server from the pool IP:{}", ip);
+            serverPool.remove(serv);
+            serverPoolSize = serverPool.size();
+            LOG.info("Server pool size: {}", serverPoolSize);
+        } else {
+            LOG.error("No such server in the pool IP:{}", ip);
+        };
+        return false;
+    }
+
+    @Override
+    public String getServerPoolStr() {
+        String pool = null;
+        for (Server serv:serverPool){
+            pool +=" "+serv.getAddress();
+        }
+        return pool;
+    }
+
+    @Override
+    public boolean addServer(String ip, String mac) {
+        Server serv = new Server(ip, mac);
+        if (serverPool.contains(serv)){
+            LOG.error("Server already in  the pool IP: {}", ip);
+            return false;
+        } else {
+            serverPool.add(serv);
+            LOG.info("Adding Server to the pool IP:{}", ip);
+            serverPoolSize = serverPool.size();
+            LOG.info("Server pool length: {}", serverPoolSize);
+            return true;
+        }
+    }
+
+    @Override
+    public List<Server> getServerPool() {
+        return serverPool;
+    }
+
+    @Override
+    public int getServerPoolSize() {
+        return serverPool.size();
+    }
+
+    @Override
+    public boolean stopLoadBalancer() {
+        LOG.info("Shutting down the load balancer..");
+        //feHandler.stop();
+        //beHandler.stop();
+        // TODO Auto-generated method stub
+        return true;
+    }
+    //packet handler for the back-end interface
     PacketListener beListener = new PacketListener() {
         @Override
         public void gotPacket(Packet packet) {
@@ -75,13 +160,22 @@ public final class LoadBalancerImpl implements LoadBalancer{
             int tosClass = precBits.value().intValue();
             Inet4Address srcAddr = ipv4Packet.getHeader().getSrcAddr();
             Inet4Address dstAddr = ipv4Packet.getHeader().getDstAddr();
-            LOG.info("Got a packet src.ip={} dst.ip= {} prec ={}",
+            LOG.info("BE: src.ip={} dst.ip= {} prec ={}",
                     srcAddr.toString(), dstAddr.toString(), tosClass);
-
+            //rewrite src.ip and src/dst.mac
+            Builder outIpv4PackBuilder = ipv4Packet.getBuilder();
+            outIpv4PackBuilder.srcAddr((Inet4Address) feipaddr);
+            org.pcap4j.packet.EthernetPacket.Builder outEtherBuilder =
+                    (org.pcap4j.packet.EthernetPacket.Builder) packet.getBuilder();
+            outEtherBuilder.srcAddr(feHandler.getIfHandlerMac());
+            outEtherBuilder.dstAddr(gwmac);
+            outEtherBuilder.payloadBuilder(outIpv4PackBuilder);
+            //send out of the front-end interface
+            feHandler.sendPacket(outEtherBuilder.build());
         }
-      };
+    };
 
-
+    //packet handler for the  front-end interface
     PacketListener feListener = new PacketListener() {
         @Override
         public void gotPacket(Packet packet) {
@@ -91,63 +185,52 @@ public final class LoadBalancerImpl implements LoadBalancer{
             int tosClass = precBits.value().intValue();
             Inet4Address srcAddr = ipv4Packet.getHeader().getSrcAddr();
             Inet4Address dstAddr = ipv4Packet.getHeader().getDstAddr();
+
             LOG.info("FE: src.ip={} dst.ip= {} prec ={}",
                     srcAddr.toString(), dstAddr.toString(), tosClass);
-            //put a packet to a particular queue
+            //put a packet to a particular CoS queue ->  process in BalancerCore
             ConcurrentLinkedQueue<Packet> queue = getPacketQueue(tosClass);
             queue.add(packet);
         }
       };
 
-    private InetSocketAddress bindSocket(String ipaddr, int port){
-        InetSocketAddress sockaddr = null;
-        if (ipaddr !=null){
-            Socket so = new Socket();
-            LOG.info("Binding to IP:{} port:{}", ipaddr, port);
-            sockaddr = new InetSocketAddress(ipaddr, port);
-            try {
-                so.bind(sockaddr);
-                //so.connect(new InetSocketAddress(ipaddr, 80));
-            } catch (IOException e) {
-                LOG.error("Can't bind to interface:{} ",ipaddr, e);
-            }
-        } else {
-            LOG.error("Null IP address provided");
-        }
-        return sockaddr;
-    }
-
     /**
      * Public constructor.
      */
-    public LoadBalancerImpl(String feip, String beip, int port, String proto, int qnum){
+    public LoadBalancerImpl(String feip, String beip, String gwmc, int port, String proto, int qnum){
         serverPool = new ArrayList<>();
         packetQueues = new ArrayList<>();
         serverPoolSize = 0;
+        gwmac = MacAddress.getByName(gwmc);
+        try {
+            feipaddr = InetAddress.getByName(feip);
+            beipaddr = InetAddress.getByName(feip);
+        } catch (UnknownHostException e) {
+            LOG.error("Wrong IP address provided", e);
+            e.printStackTrace();
+        }
         for (int i=0; i<qnum; i++){
             ConcurrentLinkedQueue<Packet> queue = new ConcurrentLinkedQueue<>();
             packetQueues.add(queue);
         }
 
-        //TODO Check IP syntax
         try {
-            //start a front-end packet handler
+            //start a front-end If packet handler
             //String filter = new String("ip src net "+feip+ " and tcp dst port "+port);
             LOG.info("Starting front-end handler");
             String feFilter = new String("ip dst net "+feip+ " and "+proto);
-            feHandler = new IfHandler(this, feip, feFilter, feListener);
+            feHandler = new IfHandler(feipaddr, feFilter, feListener);
             Thread feHandlerThread = new Thread(feHandler);
             feHandlerThread.setName("FrontEndThread");
             feHandlerThread.start();
 
-            //start a back-end packet handler
+            //start a back-end If packet handler
             LOG.info("Starting back-end handler");
             String beFilter = new String("ip dst net "+beip);
-            beHandler = new IfHandler(this, beip, beFilter, beListener);
+            beHandler = new IfHandler(beipaddr, beFilter, beListener);
             Thread beHandlerThread = new Thread(beHandler);
             beHandlerThread.setName("BackEndThread");
             beHandlerThread.start();
-
 
             //start load-balancer
             LOG.info("Starting core balancer");
@@ -161,73 +244,5 @@ public final class LoadBalancerImpl implements LoadBalancer{
             e.printStackTrace();
         }
     }
-
-    @Override
-    public String getServerPoolStr() {
-        String pool = null;
-        for (Server serv:serverPool){
-            pool +=" "+serv.getAddress();
-        }
-        return pool;
-    }
-
-    @Override
-    public boolean addServer(String iface) {
-        if (iface != null){
-            Server serv = new Server(iface);
-            if (serverPool.contains(serv)){
-                LOG.error("Server already in  the pool IP: {}", iface);
-                return false;
-            } else {
-                //TODO check iface syntax
-                serverPool.add(serv);
-                LOG.info("Adding Server to the pool IP:{}", iface);
-                serverPoolSize = serverPool.size();
-                LOG.info("Server pool length: {}", serverPoolSize);
-                //TODO rehash the balancer
-                return true;
-            }
-        } else {
-            LOG.error("Server IP address is Null", iface);
-            return false;
-        }
-    }
-
-    @Override
-    public boolean removeServer(String iface) {
-        Server serv = new Server(iface);
-        if (serverPool.contains(serv)){
-            LOG.info("Removing Server from the pool IP:{}", iface);
-            serverPool.remove(serv);
-            serverPoolSize = serverPool.size();
-            LOG.info("Server pool size: {}", serverPoolSize);
-
-        } else {
-            LOG.info("No such server in the pool IP:{}", iface);
-        };
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public boolean stopLoadBalancer() {
-        LOG.info("Shutting down the load balancer..");
-        //feHandler.stop();
-        //beHandler.stop();
-        // TODO Auto-generated method stub
-        return true;
-    }
-
-    @Override
-    public List<Server> getServerPool() {
-        return serverPool;
-    }
-
-    @Override
-    public int getServerPoolSize() {
-        return serverPoolSize;
-    }
-
-
 
 }

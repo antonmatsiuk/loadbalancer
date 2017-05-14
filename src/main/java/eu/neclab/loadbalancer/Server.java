@@ -7,26 +7,51 @@
  */
 package eu.neclab.loadbalancer;
 
+import java.net.Inet4Address;
+import java.net.UnknownHostException;
+import org.pcap4j.util.MacAddress;
+
 /**
  * @author Anton Matsiuk (anton.matsiuk@neclab.eu)
  */
+
 public class Server  {
 
   public void processInPacket() {};
 
   public void processOutPacket() {};
 
-  private final String address;
+  private Inet4Address ipaddr;
+
+  private MacAddress macaddr;
 
   /**
    * @author Anton Matsiuk (anton.matsiuk@neclab.eu)
    */
-  public Server (String ipaddr) {
-      address = ipaddr;
+  public Server (String ip, String mac) {
+      ipaddr = null;
+      macaddr = null;
+      //TODO check ip, mac syntax
+      try {
+          ipaddr = (Inet4Address) Inet4Address.getByName(ip);
+          setMacAddress(MacAddress.getByName(mac));
+      } catch (UnknownHostException e) {
+          e.printStackTrace();
+      }
+
   }
 
-  public String getAddress (){
-      return address;
+  public Inet4Address getAddress (){
+      return ipaddr;
+  }
+
+  public MacAddress getMacAddres(){
+      return macaddr;
+  }
+
+  //TODO ARP expiration and server's mobility
+  protected void setMacAddress(MacAddress mac){
+          macaddr = mac;
   }
 
   @Override
@@ -38,7 +63,7 @@ public class Server  {
           return false;
       }
       final Server other = (Server)obj;
-      if (!this.address.equals(other.getAddress())){
+      if (!this.ipaddr.equals(other.getAddress())){
           return false;
       }
     return true;

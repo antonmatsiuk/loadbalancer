@@ -8,55 +8,58 @@
 package eu.neclab.loadbalancer;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import org.pcap4j.core.BpfProgram.BpfCompileMode;
 import org.pcap4j.core.NotOpenException;
 import org.pcap4j.core.PacketListener;
 import org.pcap4j.core.PcapHandle;
 import org.pcap4j.core.PcapNativeException;
 import org.pcap4j.core.PcapNetworkInterface;
-import org.pcap4j.core.Pcaps;
 import org.pcap4j.core.PcapNetworkInterface.PromiscuousMode;
+import org.pcap4j.core.Pcaps;
 import org.pcap4j.packet.Packet;
+import org.pcap4j.util.MacAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class IfHandler implements Runnable {
 
-    /**
-     * Logger instance.
-     */
     static final Logger LOG = LoggerFactory.getLogger(IfHandler.class);
 
-    private final String ipAddr;
+    /**
+     * IP interface to apply the pcap handler.
+     */
+    private final InetAddress ipv4addr;
+
+    /**
+     * Pcap interface filter.
+     */
     private final String filter;
 
+    /**
+     * Pcap interface handler.
+     */
     private final PcapHandle handler;
 
+    /**
+     * PacketListener implements interface-specific
+     * packet parsing and processing
+     */
     private final PacketListener listener;
 
-    private final LoadBalancer lbProvider;
-
-    private boolean stop = false;
-
-    private void stop(){
-       stop = true;
-    }
-
-    public IfHandler(LoadBalancer lb, String ipadd ,String filt, PacketListener listnr)
+    public IfHandler(InetAddress ip ,String filt, PacketListener listnr)
             throws PcapNativeException, NotOpenException {
-        lbProvider = lb;
         filter= filt;
-        ipAddr = ipadd;
+        ipv4addr = ip;
         listener= listnr;
-        handler = getIPv4Handler(ipAddr);
+        handler = getIPv4Handler();
         if (filter.length() != 0) {
             handler.setFilter(
               filter,
               BpfCompileMode.OPTIMIZE);
           }
     }
-
 
     private void loopReceiver(){
         try {
@@ -70,20 +73,40 @@ public class IfHandler implements Runnable {
           }
     }
 
-    private PcapHandle getIPv4Handler(String ipaddr) {
-        InetAddress addr = null;
-        PcapNetworkInterface nif;
-        PcapHandle handle =null;
+    public void sendPacket(Packet pack){
         try {
-            addr = InetAddress.getByName(ipaddr);
-            nif = Pcaps.getDevByAddress(addr);
+            handler.sendPacket(pack);
+        } catch (PcapNativeException | NotOpenException e) {
+            LOG.error("Error sending the packet {},", pack.toString());
+            e.printStackTrace();
+        }
+    }
+
+    public MacAddress getIfHandlerMac() {
+        MacAddress macaddr = null;
+        NetworkInterface network;
+        try {
+            network = NetworkInterface.getByInetAddress(ipv4addr);
+            macaddr = MacAddress.getByAddress(network.getHardwareAddress());
+        } catch (SocketException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return macaddr;
+    }
+
+    private PcapHandle getIPv4Handler() {
+        PcapNetworkInterface nif;
+        PcapHandle handle = null;
+        try {
+            nif = Pcaps.getDevByAddress(ipv4addr);
             int snapLen = 65536;
             PromiscuousMode mode = PromiscuousMode.PROMISCUOUS;
             int timeout = 10;
             handle = nif.openLive(snapLen, mode, timeout);
-        } catch (UnknownHostException | PcapNativeException e) {
+        } catch (PcapNativeException e) {
             LOG.error("Cannot bind to interface:{} "
-                    ,ipaddr, e);
+                    ,ipv4addr.toString(), e);
         }
         return handle;
     }
@@ -91,9 +114,7 @@ public class IfHandler implements Runnable {
     @Override
     public void run() {
         LOG.info ("Starting IfHandler on iface:{} filter:{}",
-                ipAddr,filter);
+                ipv4addr.toString(),filter);
         loopReceiver();
-        // TODO Auto-generated method stub
-
     }
 }
