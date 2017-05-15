@@ -35,7 +35,7 @@ public class LoadBalancerApp {
          */
 
 //        Scanner scanner = new Scanner(System.in);
-//        System.out.print("Enter front-end Load-balancer's IP: ");
+//        System.out.print("Enter front-end Load Balancer's IP: ");
 //        String fiface = scanner.next();
 //        System.out.print("Enter Front-end Port: ");
 //        int feport = Integer.parseInt(scanner.next());
@@ -93,7 +93,10 @@ public class LoadBalancerApp {
     /**
      * Uncomment the block below to use static values
      */
-    String fiface = "10.0.2.15";
+    Scanner scanner = new Scanner(System.in);
+    System.out.print("Enter front-end Load Balancer's IP: ");
+    String fiface = scanner.next();
+    //String fiface = "10.0.2.15";
     //GW's MAC address here is static;
     //Load-balancer sends all the client-faced traffic through a gateway
     //TODO implement ARP req/reply generation
