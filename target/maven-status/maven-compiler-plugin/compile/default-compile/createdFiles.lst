@@ -1,8 +1,0 @@
-eu/neclab/loadbalancer/LoadBalancer.class
-eu/neclab/loadbalancer/LoadBalancerImpl.class
-eu/neclab/loadbalancer/LoadBalancerApp.class
-eu/neclab/loadbalancer/BalancerCore.class
-eu/neclab/loadbalancer/LoadBalancerImpl$1.class
-eu/neclab/loadbalancer/IfHandler.class
-eu/neclab/loadbalancer/LoadBalancerImpl$2.class
-eu/neclab/loadbalancer/Server.class

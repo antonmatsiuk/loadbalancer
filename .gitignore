@@ -1,0 +1,22 @@
+# Eclipse
+.classpath
+.project
+.settings/
+
+# Mac
+.DS_Store
+
+# Maven
+target/
+*~
+
+
+# Package Files #
+*.jar
+
+# Integration build
+.gitlab-ci.yml
+
+# Doxygen
+orch-doxygen.config
+doxygen2.config

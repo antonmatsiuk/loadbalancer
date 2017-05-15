@@ -48,10 +48,14 @@ public class IfHandler implements Runnable {
      */
     private final PacketListener listener;
 
-    private boolean stop = false;
+    private final boolean stop = false;
 
     public void stop (){
-        stop = true;
+        try {
+            handler.breakLoop();
+        } catch (NotOpenException e) {
+            e.printStackTrace();
+        }
     }
 
     public IfHandler(InetAddress ip ,String filt, PacketListener listnr)
@@ -71,9 +75,6 @@ public class IfHandler implements Runnable {
         try {
             //starting infinite packet capturing loop
             handler.loop(-1, listener);
-            if (stop){
-                handler.breakLoop();
-            }
           } catch (InterruptedException e) {
             e.printStackTrace();
           } catch (PcapNativeException | NotOpenException e) {

@@ -123,6 +123,7 @@ public class LoadBalancerApp {
         LOG.info("Server added to the pool {}",servip2);
     }
     //verify duplication check
+    LOG.info("Verify duplication check add server again {}",servip2);
     loadBalancer.addServer(servip2, servmac2);
     System.out.print("Active servers in the pool: ");
     System.out.print(loadBalancer.getServerPoolStr());
