@@ -16,6 +16,8 @@ Simple modifications to the core load balancer algorithm will enable WFQ and oth
 1. Create a back-end virtual interface by running `create_interface.sh`.
 2. Start the load balancer: `sudo mvn exec:java`
 3. For debug mode: `sudo mvn exec:java -X`
+4. Enter a front-end IP (e.g. the eth0 IP address with any active tcp connections)
+5. Dump the back-end interface to observe the load-balanced traffic: `sudo tcpdump -i s1-veth1`
 
 # License
 This program and the accompanying materials are made available under the terms of the Eclipse Public License v1.0 which accompanies this distribution,
