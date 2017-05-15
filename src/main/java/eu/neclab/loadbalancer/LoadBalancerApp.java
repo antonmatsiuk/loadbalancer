@@ -30,7 +30,9 @@ public class LoadBalancerApp {
     public static void main(String[] args) {
         Logger LOG = LoggerFactory.getLogger(LoadBalancerApp.class);
 
-        //Uncomment the block below to use interactive menu
+        /**
+         * Uncomment the block below to use interactive menu
+         */
 
 //        Scanner scanner = new Scanner(System.in);
 //        System.out.print("Enter front-end Load-balancer's IP: ");
@@ -88,29 +90,42 @@ public class LoadBalancerApp {
 //        }
 //        loadBalancer.stopLoadBalancer();
 
-      //uncomment the block below to use static values
-      String fiface = "10.0.2.15";
-      //GW's MAC address here is static;
-      //Load-balancer sends all the traffic to clients through a gateway
-      //TODO implement ARP req/reply or local ARP table parsing for dynamic ARP resolution
-      String gwmac = "aa:aa:aa:aa:aa:aa";
-      int feport = 80;
-      String biface = "10.10.10.1";
-      int qnum = 8;
-      String proto = "tcp";
-      LOG.info("Creating Load Balancer: front-end IP:{} back-end IP: {} proto: {} port:{} qnum:{}"
+    /**
+     * Uncomment the block below to use static values
+     */
+    String fiface = "10.0.2.15";
+    //GW's MAC address here is static;
+    //Load-balancer sends all the client-faced traffic through a gateway
+    //TODO implement ARP req/reply generation
+    //or local ARP table parsing for dynamic ARP resolution
+    String gwmac = "aa:aa:aa:aa:aa:aa";
+    //protocol for load-balncing (tcp, udp, icmp)
+    String proto = "tcp";
+    //transport port
+    int feport = 80;
+    //back-end IP address
+    String biface = "10.10.10.1";
+    //number of QoS queues
+    int qnum = 8;
+    LOG.info("Creating Load Balancer: front-end IP:{} back-end IP: {} proto: {} port:{} qnum:{}"
               ,fiface, biface, proto, feport, qnum);
-
-      LoadBalancer loadBalancer = new LoadBalancerImpl(fiface, biface, gwmac, feport, proto, qnum);
-      String servip1 = "10.10.10.2";
-      String servmac1 = "bb:bb:bb:bb:bb:bb";
-      loadBalancer.addServer(servip1, servmac1);
-      String servip2 = "10.10.10.3";
-      String servmac2 = "cc:cc:cc:cc:cc:cc";
-      loadBalancer.addServer(servip2, servmac2);
-      loadBalancer.addServer(servip2, servmac2);
-      System.out.print("Active servers in the pool: ");
-      System.out.print(loadBalancer.getServerPoolStr());
+    LoadBalancer loadBalancer = new LoadBalancerImpl(fiface, biface, gwmac, feport, proto, qnum);
+    //add 1st server to the pool
+    String servip1 = "10.10.10.2";
+    String servmac1 = "bb:bb:bb:bb:bb:bb";
+    if (loadBalancer.addServer(servip1, servmac1)){
+        LOG.info("Server added to the pool {}",servip1);
+    }
+    //add 2nd server to the pool
+    String servip2 = "10.10.10.3";
+    String servmac2 = "cc:cc:cc:cc:cc:cc";
+    if (loadBalancer.addServer(servip2, servmac2)){
+        LOG.info("Server added to the pool {}",servip2);
+    }
+    //verify duplication check
+    loadBalancer.addServer(servip2, servmac2);
+    System.out.print("Active servers in the pool: ");
+    System.out.print(loadBalancer.getServerPoolStr());
 
     }
 }

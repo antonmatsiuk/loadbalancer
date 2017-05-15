@@ -59,10 +59,16 @@ public final class LoadBalancerImpl implements LoadBalancer{
      * Front-end IF handler.
      */
     private IfHandler feHandler;
+
     /**
      * Back-end IF handler.
      */
     private IfHandler beHandler;
+
+    /**
+     * Core load-balancer.
+     */
+    private BalancerCore balancerCore;
 
 
     @Override
@@ -145,11 +151,12 @@ public final class LoadBalancerImpl implements LoadBalancer{
     @Override
     public boolean stopLoadBalancer() {
         LOG.info("Shutting down the load balancer..");
-        //feHandler.stop();
-        //beHandler.stop();
-        // TODO Auto-generated method stub
+        feHandler.stop();
+        beHandler.stop();
+        balancerCore.stop();
         return true;
     }
+
     //packet handler for the back-end interface
     PacketListener beListener = new PacketListener() {
         @Override
@@ -160,7 +167,7 @@ public final class LoadBalancerImpl implements LoadBalancer{
             int tosClass = precBits.value().intValue();
             Inet4Address srcAddr = ipv4Packet.getHeader().getSrcAddr();
             Inet4Address dstAddr = ipv4Packet.getHeader().getDstAddr();
-            LOG.info("BE: src.ip={} dst.ip= {} prec ={}",
+            LOG.debug("BE: src.ip={} dst.ip= {} prec ={}",
                     srcAddr.toString(), dstAddr.toString(), tosClass);
             //rewrite src.ip and src/dst.mac
             Builder outIpv4PackBuilder = ipv4Packet.getBuilder();
@@ -175,7 +182,8 @@ public final class LoadBalancerImpl implements LoadBalancer{
         }
     };
 
-    //packet handler for the  front-end interface
+    //packet handler for the front-end interface
+    //TODO add src MAC caching alternatively to ARP resolution
     PacketListener feListener = new PacketListener() {
         @Override
         public void gotPacket(Packet packet) {
@@ -186,7 +194,7 @@ public final class LoadBalancerImpl implements LoadBalancer{
             Inet4Address srcAddr = ipv4Packet.getHeader().getSrcAddr();
             Inet4Address dstAddr = ipv4Packet.getHeader().getDstAddr();
 
-            LOG.info("FE: src.ip={} dst.ip= {} prec ={}",
+            LOG.debug("FE: src.ip={} dst.ip= {} prec ={}",
                     srcAddr.toString(), dstAddr.toString(), tosClass);
             //put a packet to a particular CoS queue ->  process in BalancerCore
             ConcurrentLinkedQueue<Packet> queue = getPacketQueue(tosClass);
@@ -234,7 +242,7 @@ public final class LoadBalancerImpl implements LoadBalancer{
 
             //start load-balancer
             LOG.info("Starting core balancer");
-            BalancerCore balancerCore = new BalancerCore(this, beip);
+            balancerCore = new BalancerCore(this, beip);
             Thread balancerCoreThread = new Thread(balancerCore);
             balancerCoreThread.setName("BalancerCoreThread");
             balancerCoreThread.start();
@@ -244,5 +252,4 @@ public final class LoadBalancerImpl implements LoadBalancer{
             e.printStackTrace();
         }
     }
-
 }

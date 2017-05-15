@@ -19,12 +19,19 @@ import org.pcap4j.util.MacAddress;
 public interface LoadBalancer {
 
     /**
+     * Add server to the pool
      * @param ip An {@link String} IP address of the server
      * @param mac A {@link String} MAC address of the server
      * @return boolean operation result
      */
     public boolean addServer(String ip, String mac);
 
+    /**
+     * Remove server from the pool
+     * @param ip An {@link String} IP address of the server
+     * @param mac A {@link String} MAC address of the server
+     * @return boolean operation result
+     */
     public boolean removeServer(String iface);
 
     public String getServerPoolStr();

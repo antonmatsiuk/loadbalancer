@@ -21,9 +21,6 @@ import org.slf4j.LoggerFactory;
  */
 public class BalancerCore implements Runnable {
 
-    /**
-     * Logger instance.
-     */
     static final Logger LOG = LoggerFactory.getLogger(BalancerCore.class);
 
     private final String beIface;
@@ -35,6 +32,16 @@ public class BalancerCore implements Runnable {
         lbProvider = lb;
     }
 
+    private boolean stop = false;
+
+    public void stop (){
+        stop = true;
+    }
+
+    /**
+     * Load balancing the packets
+     * TODO keep state of the established flows during rehashing
+     */
     private Server balanceIpv4Packet(IpV4Packet pack){
         Server serv = null;
         int poolsize = lbProvider.getServerPoolSize();
@@ -57,7 +64,7 @@ public class BalancerCore implements Runnable {
     public void run() {
 
         int numq = lbProvider.getQueueNum();
-        while (true){
+        while (!stop){
             //Implements strict queuing
             //TODO implement WFQ (get n packet from n-th queue in a cycle)
             IfHandler behandler = lbProvider.getBeHandler();
@@ -68,11 +75,12 @@ public class BalancerCore implements Runnable {
                 while (!queue.isEmpty()){
                     Packet pack = queue.poll();
                     if (pack != null){
-                        LOG.info("Got packet from the queue: {}", i);
+                        LOG.trace("Got packet from the queue: {}", i);
                         IpV4Packet ipv4pack = pack.get(IpV4Packet.class);
+
                         //get server
                         Server serv = balanceIpv4Packet(ipv4pack);
-                        LOG.info("LB: ip.src: {} => dst.server: {}",
+                        LOG.debug("LB: ip.src: {} => dst.server: {}",
                                 ipv4pack.getHeader().getSrcAddr(), serv.getAddress().toString());
 
                         //rewriting headers
@@ -83,11 +91,13 @@ public class BalancerCore implements Runnable {
                         outEtherBuilder.srcAddr(srcmac);
                         outEtherBuilder.dstAddr(serv.getMacAddres());
                         outEtherBuilder.payloadBuilder(outIpv4PackBuilder);
+
                         //send out of back-end interface
                         behandler.sendPacket(outEtherBuilder.build());
                     }
                 }
             }
         }
+        LOG.info("Terminating core balancer...");
     }
 }

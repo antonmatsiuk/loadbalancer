@@ -48,6 +48,12 @@ public class IfHandler implements Runnable {
      */
     private final PacketListener listener;
 
+    private boolean stop = false;
+
+    public void stop (){
+        stop = true;
+    }
+
     public IfHandler(InetAddress ip ,String filt, PacketListener listnr)
             throws PcapNativeException, NotOpenException {
         filter= filt;
@@ -65,6 +71,9 @@ public class IfHandler implements Runnable {
         try {
             //starting infinite packet capturing loop
             handler.loop(-1, listener);
+            if (stop){
+                handler.breakLoop();
+            }
           } catch (InterruptedException e) {
             e.printStackTrace();
           } catch (PcapNativeException | NotOpenException e) {
@@ -116,5 +125,6 @@ public class IfHandler implements Runnable {
         LOG.info ("Starting IfHandler on iface:{} filter:{}",
                 ipv4addr.toString(),filter);
         loopReceiver();
+        LOG.info("Terminating IF handler...");
     }
 }
