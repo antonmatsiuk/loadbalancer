@@ -33,103 +33,60 @@ public class LoadBalancerApp {
         /**
          * Uncomment the block below to use interactive menu
          */
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter front-end Load Balancer's IP: ");
+        String fiface = scanner.next();
+        System.out.print("Enter Front-end Port: ");
+        int feport = Integer.parseInt(scanner.next());
+        System.out.print("Enter back-end Load-balancer's IP: ");
+        String biface = scanner.next();
+        System.out.print("Enter Front-end GW MAC: ");
+        String gwmac  = scanner.next();
+        System.out.print("Enter 1st Server IP to add: ");
+        String servip1 = scanner.next();
+        System.out.print("Enter 1st Server MAC to add: ");
+        String servmac1 = scanner.next();
+        //Hardcoding qnum;
+        int qnum = 8;
+        String proto = "tcp";
+        LOG.info("Creating Load Balancer: front-end IP:{} back-end IP: {} proto: {} port:{} qnum:{}"
+                ,fiface, biface, proto, feport, qnum);
 
-//        Scanner scanner = new Scanner(System.in);
-//        System.out.print("Enter front-end Load Balancer's IP: ");
-//        String fiface = scanner.next();
-//        System.out.print("Enter Front-end Port: ");
-//        int feport = Integer.parseInt(scanner.next());
-//        System.out.print("Enter back-end Load-balancer's IP: ");
-//        String biface = scanner.next();
-//        System.out.print("Enter Front-end GW MAC: ");
-//        String gwmac  = scanner.next();
-//        System.out.print("Enter 1st Server IP to add: ");
-//        String servip1 = scanner.next();
-//        System.out.print("Enter 1st Server MAC to add: ");
-//        String servmac1 = scanner.next();
-//        //Hardcoding qnum;
-//        int qnum = 8;
-//        String proto = "tcp";
-//        LOG.info("Creating Load Balancer: front-end IP:{} back-end IP: {} proto: {} port:{} qnum:{}"
-//                ,fiface, biface, proto, feport, qnum);
-//
-//        LoadBalancer loadBalancer = new LoadBalancerImpl(fiface, biface, gwmac, feport, proto, qnum);
-//        loadBalancer.addServer(servip1, servmac1);
-//
-//        try {
-//            Thread.sleep(1000);
-//        } catch (InterruptedException e) {
-//            // TODO Auto-generated catch block
-//            e.printStackTrace();
-//        }
-//        menu();
-//        int command = Integer.parseInt(scanner.next());
-//        while (command !=  0){
-//            if (command == 1){
-//                System.out.print("Enter Server IP to add: ");
-//                String servip = scanner.next();
-//                System.out.print("Enter Server MAC to add: ");
-//                String servmac = scanner.next();
-//                loadBalancer.addServer(servip, servmac);
-//            } else if (command == 2){
-//                System.out.print("Enter Server IP to remove: ");
-//                String servip = scanner.next();
-//                loadBalancer.removeServer(servip);
-//            } else if (command == 3){
-//                System.out.print("Active servers in the pool: ");
-//                //loadBalancer.getServerPool();
-//            } else if (command == 0){
-//                System.out.print("Exiting LoadBalancer app...");
-//                break;
-//            }
-//            else {
-//                System.out.print("Unknown command, try again");
-//            }
-//            menu();
-//            command = Integer.parseInt(scanner.next());
-//        }
-//        loadBalancer.stopLoadBalancer();
+        LoadBalancer loadBalancer = new LoadBalancerImpl(fiface, biface, gwmac, feport, proto, qnum);
+        loadBalancer.addServer(servip1, servmac1);
 
-    /**
-     * Uncomment the block below to use static values
-     */
-    Scanner scanner = new Scanner(System.in);
-    System.out.print("Enter front-end Load Balancer's IP: ");
-    String fiface = scanner.next();
-    //String fiface = "10.0.2.15";
-    //GW's MAC address here is static;
-    //Load-balancer sends all the client-faced traffic through a gateway
-    //TODO implement ARP req/reply generation
-    //or local ARP table parsing for dynamic ARP resolution
-    String gwmac = "aa:aa:aa:aa:aa:aa";
-    //protocol for load-balncing (tcp, udp, icmp)
-    String proto = "tcp";
-    //transport port
-    int feport = 80;
-    //back-end IP address
-    String biface = "10.10.10.1";
-    //number of QoS queues
-    int qnum = 8;
-    LOG.info("Creating Load Balancer: front-end IP:{} back-end IP: {} proto: {} port:{} qnum:{}"
-              ,fiface, biface, proto, feport, qnum);
-    LoadBalancer loadBalancer = new LoadBalancerImpl(fiface, biface, gwmac, feport, proto, qnum);
-    //add 1st server to the pool
-    String servip1 = "10.10.10.2";
-    String servmac1 = "bb:bb:bb:bb:bb:bb";
-    if (loadBalancer.addServer(servip1, servmac1)){
-        LOG.info("Server added to the pool {}",servip1);
-    }
-    //add 2nd server to the pool
-    String servip2 = "10.10.10.3";
-    String servmac2 = "cc:cc:cc:cc:cc:cc";
-    if (loadBalancer.addServer(servip2, servmac2)){
-        LOG.info("Server added to the pool {}",servip2);
-    }
-    //verify duplication check
-    LOG.info("Verify duplication check add server again {}",servip2);
-    loadBalancer.addServer(servip2, servmac2);
-    System.out.print("Active servers in the pool: ");
-    System.out.print(loadBalancer.getServerPoolStr());
-
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        menu();
+        int command = Integer.parseInt(scanner.next());
+        while (command !=  0){
+            if (command == 1){
+                System.out.print("Enter Server IP to add: ");
+                String servip = scanner.next();
+                System.out.print("Enter Server MAC to add: ");
+                String servmac = scanner.next();
+                loadBalancer.addServer(servip, servmac);
+            } else if (command == 2){
+                System.out.print("Enter Server IP to remove: ");
+                String servip = scanner.next();
+                loadBalancer.removeServer(servip);
+            } else if (command == 3){
+                System.out.print("Active servers in the pool: ");
+                //loadBalancer.getServerPool();
+            } else if (command == 0){
+                System.out.print("Exiting LoadBalancer app...");
+                break;
+            }
+            else {
+                System.out.print("Unknown command, try again");
+            }
+            menu();
+            command = Integer.parseInt(scanner.next());
+        }
+        loadBalancer.stopLoadBalancer();
     }
 }
